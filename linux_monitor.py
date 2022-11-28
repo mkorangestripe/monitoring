@@ -1,0 +1,174 @@
+'''
+Collect system metrics.
+'''
+
+import json
+import logging
+import os
+from pprint import pprint
+import re
+import sys
+from datetime import datetime
+from urllib import request
+import yaml
+
+import psutil
+
+# Ansible creates this log file and chown's to the user:
+LOG_FILE = "/var/log/linux_monitor.log"
+CONFIG_FILE = "linux_monitor_config.yml"
+
+FORMAT = '%(asctime)-15s %(levelname)s %(message)s'
+logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format=FORMAT)
+
+try:
+    with open(CONFIG_FILE, "r", encoding="utf-8") as in_file:
+        metrics_config = yaml.safe_load(in_file)
+except:
+    logging.critical("Could not open %s, exiting", CONFIG_FILE)
+    sys.exit(1)
+
+locals().update(metrics_config['settings'])
+fs_config_file = config_dir + fs_config_file_name
+fs_config_file_max_age_hours = fs_config_file_max_age / 3600
+fs_config_url = fs_config_base_url + fs_config_file_name
+hostname = os.uname().nodename
+
+starttime = datetime.now().timestamp()
+logging.info("Starting metrics collection")
+
+def get_json(json_url, json_file, json_required=True):
+    '''Get the json config file, write to file, return content'''
+    logging.info("Getting update for %s", json_file)
+    request_for_json = request.Request(json_url)
+    json_bytes = ''
+
+    try:
+        with request.urlopen(request_for_json) as response:
+            json_bytes = response.read()
+    except (request.URLError, request.HTTPError) as e:
+        logging.error("%s | %s", e, json_url)
+
+    if json_bytes != '':
+        with open(json_file, 'wb') as out_file:
+            out_file.write(json_bytes)
+    elif json_required is True:
+        logging.critical("Cannot get %s, exiting", json_url)
+        exit_gracefully()
+
+    return json_bytes
+
+def read_json_file_on_disk(json_file):
+    '''Read in file and return raw content'''
+    with open(json_file, 'r', encoding="utf-8") as in_file:
+        file_content = in_file.read()
+
+    return file_content
+
+def exit_gracefully():
+    '''Exit gracefully'''
+    endtime = datetime.now().timestamp()
+    runtime = endtime - starttime
+    logging.info("Finished, metrics collection run time: %.2f seconds" % runtime)
+    sys.exit()
+
+class SystemMetrics:
+    """Collect system metrics"""
+
+    def __init__(self):
+        self.metrics = {}
+
+    def get_load_avg(self):
+        """Get system load averages"""
+        logging.info("Collecting system load metrics")
+        system_load_avg = {}
+        system_load_1, system_load_5, system_load_15 = os.getloadavg()
+        system_load_avg["system.load.1"] = system_load_1
+        system_load_avg["system.load.5"] = system_load_5
+        system_load_avg["system.load.15"] = system_load_15
+        self.metrics["system_load_avg"] = system_load_avg
+
+    def get_uptime(self):
+        """Get system uptime"""
+        logging.info("Getting system uptime")
+        system_timestamp = int(datetime.now().timestamp())
+        try:
+            boot_time = psutil.boot_time()
+        except:
+            logging.error("Could not collect system uptime")
+        else:
+            system_uptime = system_timestamp - boot_time
+            self.metrics["system.uptime"] = system_uptime
+
+    def get_cpu_metrics(self):
+        """Get CPU metrics"""
+        logging.info("Collecting CPU metrics")
+        cpu_metrics = {}
+        try:
+            cpu_times_percent = psutil.cpu_times_percent()
+        except:
+            logging.error("Could not collect CPU metrics")
+        else:
+            cpu_metrics["system.cpu.user"] = cpu_times_percent.user
+            cpu_metrics["system.cpu.system"] = cpu_times_percent.system
+            cpu_metrics["system.cpu.idle"] = cpu_times_percent.idle
+            # iowait not defined on macOS:
+            # cpu_metrics["system.cpu.iowait"] = cpu_times_percent.iowait
+            self.metrics["system_cpu"] = cpu_metrics
+
+    def get_mem_metrics(self):
+        """Get memory metrics"""
+        logging.info("Collecting memory metrics")
+        memory_metrics = {}
+        try:
+            system_mem = psutil.virtual_memory()
+        except:
+            logging.error("Could not collect memory metrics")
+        else:
+            memory_metrics["system.mem.total"] = system_mem.total
+            # mem_available not defined on macOS:
+            # memory_metrics["mem_available"] = system_mem.available
+            # memory_metrics["mem_pct_usable"] = mem_available / mem_total
+            self.metrics["system_mem"] = memory_metrics
+
+    def get_swap_metrics(self):
+        """Get swap space metrics"""
+        # datadog_system_swap_metrics = {"free":"chr.system.swap.free", "used":"chr.system.swap.used"}
+        logging.info("Collecting swap space metrics")
+        swap_metrics = {}
+        try:
+            swap_memory = psutil.swap_memory()
+        except:
+            logging.error("Could not collect swap space metrics")
+        else:
+            swap_metrics["system.swap.free"] = swap_memory.free
+            swap_metrics["system.swap.used"] = swap_memory.used
+            self.metrics["swap_memory"] = swap_metrics
+
+    def collect_disk_metrics(self):
+        """Get filesystem metrics"""
+
+
+if not os.path.exists(config_dir):
+    logging.info("%s not found, creating it now", config_dir)
+    os.makedirs(config_dir)
+
+if not os.path.exists(fs_config_file):
+    fs_config = json.loads(get_json(fs_config_url, fs_config_file))
+elif (datetime.now().timestamp() - os.stat(fs_config_file).st_mtime) >= fs_config_file_max_age:
+    logging.info("%s >= %s hours", fs_config_file_name, fs_config_file_max_age_hours)
+    ret_json_bytes = get_json(fs_config_url, fs_config_file, False)
+    if ret_json_bytes == '':
+        logging.warning("Could not retrieve new config file, using existing")
+    agent_config = json.loads(read_json_file_on_disk(fs_config_file))
+else:
+    agent_config = json.loads(read_json_file_on_disk(fs_config_file))
+
+system_metrics = SystemMetrics()
+
+for method in metrics_config['metrics']:
+    if method in dir(system_metrics):
+        method = "system_metrics." + method
+        eval(method)()
+
+pprint(system_metrics.metrics)
