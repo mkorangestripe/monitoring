@@ -118,7 +118,7 @@ class SystemMetrics:
             cpu_metrics["system.cpu.system"] = cpu_times_percent.system
             cpu_metrics["system.cpu.idle"] = cpu_times_percent.idle
             # iowait not defined on macOS:
-            # cpu_metrics["system.cpu.iowait"] = cpu_times_percent.iowait
+            cpu_metrics["system.cpu.iowait"] = cpu_times_percent.iowait
             self.metrics["system_cpu"] = cpu_metrics
 
     def get_mem_metrics(self):
@@ -131,9 +131,9 @@ class SystemMetrics:
             logging.error("Could not collect memory metrics")
         else:
             memory_metrics["system.mem.total"] = system_mem.total
-            # mem_available not defined on macOS:
-            # memory_metrics["mem_available"] = system_mem.available
-            # memory_metrics["mem_pct_usable"] = mem_available / mem_total
+            memory_metrics["system.mem.available"] = system_mem.available
+            mem_pct_usable = system_mem.available / system_mem.total * 100
+            memory_metrics["mem.pct.usable"] = round(mem_pct_usable, 5)
             self.metrics["system_mem"] = memory_metrics
 
     def get_swap_metrics(self):
@@ -190,12 +190,11 @@ class SystemMetrics:
             self.metrics['filesystems'][filesystem] = {}
 
             try:
-                # disk_in_use = psutil.disk_usage(self.filtered_filesystems[filesystem]).percent / 100
-                disk_in_use = psutil.disk_usage(self.filtered_filesystems[filesystem]).percent
+                disk_pct_used = psutil.disk_usage(self.filtered_filesystems[filesystem]).percent
             except:
                 logging.error("Could not check disk usage on filesystem mounted at %s", self.filtered_filesystems[filesystem])
             else:
-                self.metrics['filesystems'][filesystem]['system.disk.in_use'] = disk_in_use
+                self.metrics['filesystems'][filesystem]['system.disk.pct_used'] = disk_pct_used
 
             try:
                 statvfs = os.statvfs(self.filtered_filesystems[filesystem])
@@ -205,9 +204,9 @@ class SystemMetrics:
                 total_inode = statvfs.f_files
                 if total_inode != 0:
                     free_inode = statvfs.f_ffree
-                    inodes_in_use = (total_inode - free_inode) / total_inode
-                    inodes_in_use = round(inodes_in_use, 5)
-                    self.metrics['filesystems'][filesystem]['system.fs.inodes.in_use'] = inodes_in_use
+                    inodes_pct_used = (total_inode - free_inode) / total_inode * 100
+                    inodes_pct_used = round(inodes_pct_used, 5)
+                    self.metrics['filesystems'][filesystem]['system.fs.inodes.pct_used'] = inodes_pct_used
 
     def get_filesystems(self):
         """Get filesystems, filter out unwanted filesystems, and call get_filesystem_metrics()"""
