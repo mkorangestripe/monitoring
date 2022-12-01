@@ -1,5 +1,5 @@
 '''
-Collect system metrics.
+Collect system metrics
 '''
 
 import json
@@ -76,7 +76,12 @@ class SystemMetrics:
     """Collect system metrics"""
 
     def __init__(self):
+        self.fs_config = ''
+        self.mountpoint_ignore_regex = ''
+        self.filesystem_ignore_regex = ''
+        self.filtered_filesystems = {}
         self.metrics = {}
+        self.metrics['filesystems'] = {}
 
     def get_load_avg(self):
         """Get system load averages"""
@@ -133,7 +138,6 @@ class SystemMetrics:
 
     def get_swap_metrics(self):
         """Get swap space metrics"""
-        # datadog_system_swap_metrics = {"free":"chr.system.swap.free", "used":"chr.system.swap.used"}
         logging.info("Collecting swap space metrics")
         swap_metrics = {}
         try:
@@ -145,24 +149,88 @@ class SystemMetrics:
             swap_metrics["system.swap.used"] = swap_memory.used
             self.metrics["swap_memory"] = swap_metrics
 
-    def collect_disk_metrics(self):
-        """Get filesystem metrics"""
+    def get_filesystem_ignore_patterns(self):
+        """Get filesystem and mountpoint ignore patterns"""
+        if not os.path.exists(config_dir):
+            logging.info("%s not found, creating it now", config_dir)
+            os.makedirs(config_dir)
 
+        if not os.path.exists(fs_config_file):
+            self.fs_config = json.loads(get_json(fs_config_url, fs_config_file))
+        elif (datetime.now().timestamp() - os.stat(fs_config_file).st_mtime) >= fs_config_file_max_age:
+            logging.info("%s >= %s hours", fs_config_file_name, fs_config_file_max_age_hours)
+            ret_json_bytes = get_json(fs_config_url, fs_config_file, False)
+            if ret_json_bytes == '':
+                logging.warning("Could not retrieve new config file, using existing")
+            self.fs_config = json.loads(read_json_file_on_disk(fs_config_file))
+        else:
+            self.fs_config = json.loads(read_json_file_on_disk(fs_config_file))
 
-if not os.path.exists(config_dir):
-    logging.info("%s not found, creating it now", config_dir)
-    os.makedirs(config_dir)
+    def compile_filesystem_ignore_regex(self):
+        """Compile regex patterns to ignore some filesystems and mountpoints"""
+        mountpoint_ignore_patterns = self.fs_config["mountpoint_ignore_patterns"]
+        try:
+            self.mountpoint_ignore_regex = re.compile(mountpoint_ignore_patterns, re.I)
+        except:
+            logging.critical("Regex %s did not compile, exiting", mountpoint_ignore_patterns)
+            exit_gracefully()
 
-if not os.path.exists(fs_config_file):
-    fs_config = json.loads(get_json(fs_config_url, fs_config_file))
-elif (datetime.now().timestamp() - os.stat(fs_config_file).st_mtime) >= fs_config_file_max_age:
-    logging.info("%s >= %s hours", fs_config_file_name, fs_config_file_max_age_hours)
-    ret_json_bytes = get_json(fs_config_url, fs_config_file, False)
-    if ret_json_bytes == '':
-        logging.warning("Could not retrieve new config file, using existing")
-    agent_config = json.loads(read_json_file_on_disk(fs_config_file))
-else:
-    agent_config = json.loads(read_json_file_on_disk(fs_config_file))
+        filesystem_ignore_patterns = self.fs_config["filesystem_ignore_patterns"]
+        try:
+            self.filesystem_ignore_regex = re.compile(filesystem_ignore_patterns, re.I)
+        except:
+            logging.critical("Regex %s did not compile, exiting", filesystem_ignore_patterns)
+            exit_gracefully()
+
+    def get_filesystem_metrics(self):
+        '''Collect filesystem and inode usage metrics'''
+
+        for filesystem in self.filtered_filesystems:
+            logging.info("Checking filesystem mounted at %s", self.filtered_filesystems[filesystem])
+            self.metrics['filesystems'][filesystem] = {}
+
+            try:
+                # disk_in_use = psutil.disk_usage(self.filtered_filesystems[filesystem]).percent / 100
+                disk_in_use = psutil.disk_usage(self.filtered_filesystems[filesystem]).percent
+            except:
+                logging.error("Could not check disk usage on filesystem mounted at %s", self.filtered_filesystems[filesystem])
+            else:
+                self.metrics['filesystems'][filesystem]['system.disk.in_use'] = disk_in_use
+
+            try:
+                statvfs = os.statvfs(self.filtered_filesystems[filesystem])
+            except:
+                logging.error("Could not check inode usage on filesystem mounted at %s", self.filtered_filesystems[filesystem])
+            else:
+                total_inode = statvfs.f_files
+                if total_inode != 0:
+                    free_inode = statvfs.f_ffree
+                    inodes_in_use = (total_inode - free_inode) / total_inode
+                    inodes_in_use = round(inodes_in_use, 5)
+                    self.metrics['filesystems'][filesystem]['system.fs.inodes.in_use'] = inodes_in_use
+
+    def get_filesystems(self):
+        """Get filesystems, filter out unwanted filesystems, and call get_filesystem_metrics()"""
+        self.get_filesystem_ignore_patterns()
+        self.compile_filesystem_ignore_regex()
+        logging.info("Getting filesystems on machine")
+        ignore_fstype = ['autofs','binfmt_misc','cgroup','configfs','debugfs','devpts','efivarfs','fusectl',
+                         'hugetlbfs','mqueue','proc','pstore','securityfs','selinuxfs','sysfs']
+        try:
+            filesystems = psutil.disk_partitions(True)
+        except:
+            logging.error("Could not get filesystems on machine")
+        else:
+            for filesystem in filesystems:
+                if filesystem.fstype not in ignore_fstype:
+                    mountpoint_match = self.mountpoint_ignore_regex.match(filesystem.mountpoint)
+                    filesystem_match = self.filesystem_ignore_regex.match(filesystem.device)
+                    if bool(mountpoint_match) is False and bool(filesystem_match) is False:
+                        self.filtered_filesystems[filesystem.device] = filesystem.mountpoint
+
+            logging.info("Collecting filesystem metrics")
+            self.get_filesystem_metrics()
+
 
 system_metrics = SystemMetrics()
 
@@ -172,3 +240,5 @@ for method in metrics_config['metrics']:
         eval(method)()
 
 pprint(system_metrics.metrics)
+
+exit_gracefully()
