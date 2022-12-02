@@ -22,8 +22,8 @@ FORMAT = '%(asctime)-15s %(levelname)s %(message)s'
 logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format=FORMAT)
 
 try:
-    with open(CONFIG_FILE, "r", encoding="utf-8") as in_file:
-        metrics_config = yaml.safe_load(in_file)
+    with open(CONFIG_FILE, "r", encoding="utf-8") as yaml_in_file:
+        metrics_config = yaml.safe_load(yaml_in_file)
 except:
     logging.critical("Could not open %s, exiting", CONFIG_FILE)
     sys.exit(1)
@@ -46,8 +46,8 @@ def get_json(json_url, json_file, json_required=True):
     try:
         with request.urlopen(request_for_json) as response:
             json_bytes = response.read()
-    except (request.URLError, request.HTTPError) as e:
-        logging.error("%s | %s", e, json_url)
+    except (request.URLError, request.HTTPError) as error:
+        logging.error("%s | %s", error, json_url)
 
     if json_bytes != '':
         with open(json_file, 'wb') as out_file:
@@ -60,8 +60,8 @@ def get_json(json_url, json_file, json_required=True):
 
 def read_json_file_on_disk(json_file):
     '''Read in file and return raw content'''
-    with open(json_file, 'r', encoding="utf-8") as in_file:
-        file_content = in_file.read()
+    with open(json_file, 'r', encoding="utf-8") as json_in_file:
+        file_content = json_in_file.read()
 
     return file_content
 
