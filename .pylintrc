@@ -599,7 +599,8 @@ signature-mutators=
 additional-builtins=config_dir,
                     fs_config_file_name,
                     fs_config_file_max_age,
-                    fs_config_base_url
+                    fs_config_base_url,
+                    metrics_file
 
 # Tells whether unused global variables should be treated as a violation.
 allow-global-unused-variables=yes

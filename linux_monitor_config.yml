@@ -1,9 +1,10 @@
 ---
 settings:
-  config_dir: "/tmp/metrics/"
+  config_dir: /tmp/metrics/
   fs_config_file_max_age: 10800
-  fs_config_file_name: "ConfigLinux.json"
-  fs_config_base_url: "https://gist.github.com/mkorangestripe/a40446930159849f256591a48c1c75b0/raw/"
+  fs_config_file_name: ConfigLinux.json
+  fs_config_base_url: https://gist.github.com/mkorangestripe/a40446930159849f256591a48c1c75b0/raw/
+  metrics_file: /var/log/linux_monitor.json  # Ansible creates this file for the user
 
 metrics:
   - get_load_avg

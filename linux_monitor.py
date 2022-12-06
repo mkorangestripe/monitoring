@@ -5,7 +5,6 @@ Collect system metrics
 import json
 import logging
 import os
-from pprint import pprint
 import re
 import sys
 from datetime import datetime
@@ -14,8 +13,7 @@ import yaml
 
 import psutil
 
-# Ansible creates this log file and chown's to the user:
-LOG_FILE = "/var/log/linux_monitor.log"
+LOG_FILE = "/var/log/linux_monitor.log"  # Ansible creates this log file for the user
 CONFIG_FILE = "linux_monitor_config.yml"
 
 FORMAT = '%(asctime)-15s %(levelname)s %(message)s'
@@ -80,7 +78,7 @@ class SystemMetrics:
         self.mountpoint_ignore_regex = ''
         self.filesystem_ignore_regex = ''
         self.filtered_filesystems = {}
-        self.metrics = {}
+        self.metrics = {'hostname':hostname}
         self.metrics['filesystems'] = {}
 
     def get_load_avg(self):
@@ -238,6 +236,14 @@ for method in metrics_config['metrics']:
         method = "system_metrics." + method
         eval(method)()
 
-pprint(system_metrics.metrics)
+timestamp = datetime.now().timestamp()
+metrics_json = {timestamp:system_metrics.metrics}
+
+try:
+    with open(metrics_file, "a", encoding="utf-8") as metrics_out_file:
+        metrics_out_file.write(json.dumps(metrics_json))
+except:
+    logging.critical("Could not open %s, exiting", metrics_file)
+    sys.exit(1)
 
 exit_gracefully()
