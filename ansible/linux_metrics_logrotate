@@ -1,0 +1,7 @@
+/var/log/linux_metrics.log {
+    missingok
+    notifempty
+    size 20M
+    copytruncate
+    rotate 7
+}

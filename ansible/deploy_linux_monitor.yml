@@ -1,0 +1,116 @@
+---
+- name: Deploy Linux monitoring
+  hosts: all
+  remote_user: "{{ ansible_user }}"
+  vars_files:
+  - vars.yml
+  # gather_facts: false
+
+  tasks:
+
+  - name: Create monitor directory
+    ansible.builtin.file:
+      path: "/home/{{ svc_user }}/monitor"
+      owner: "{{ svc_user }}"
+      mode: '0755'
+      state: directory
+    tags:
+      - pip
+      - script
+
+  - name: Copy Pip requirements file
+    ansible.builtin.copy:
+      src: ../requirements.txt
+      dest: "/home/{{ svc_user }}/monitor/"
+      owner: "{{ svc_user }}"
+      mode: '0644'
+    tags:
+      - pip
+
+  - name: Update pip to the latest version
+    ansible.builtin.pip:
+      name: ['pip']
+      state: latest
+      extra_args: --user
+      executable: /usr/bin/pip3
+    tags:
+      - pip
+
+  - name: Install Python modules
+    ansible.builtin.pip:
+      requirements: "/home/{{ svc_user }}/monitor/requirements.txt"
+      extra_args: --user
+      executable: /usr/bin/pip3
+    tags:
+      - pip
+
+  - name: Create log file
+    ansible.builtin.copy:
+      content: ""
+      dest: /var/log/linux_monitor.log
+      force: false
+      owner: "{{ svc_user }}"
+      mode: '0644'
+    become: true
+    tags:
+      - logging
+
+  - name: Copy logrotate config file for script log
+    ansible.builtin.copy:
+      src: linux_monitor_logrotate
+      dest: /etc/logrotate.d/linux_monitor_logrotate
+      owner: root
+      mode: '0644'
+    become: true
+    tags:
+      - logging
+
+  - name: Create metrics file
+    ansible.builtin.copy:
+      content: ""
+      dest: /var/log/linux_monitor.json
+      force: false
+      owner: "{{ svc_user }}"
+      mode: '0644'
+    become: true
+    tags:
+      - metrics
+
+  - name: Copy logrotate config file for metrics
+    ansible.builtin.copy:
+      src: linux_metrics_logrotate
+      dest: /etc/logrotate.d/linux_metrics_logrotate
+      owner: root
+      mode: '0644'
+    become: true
+    tags:
+      - metrics
+
+  - name: Copy monitoring script
+    ansible.builtin.copy:
+      src: ../linux_monitor.py
+      dest: "/home/{{ svc_user }}/monitor"
+      owner: "{{ svc_user }}"
+      mode: '0644'
+    tags:
+      - script
+
+  - name: Copy monitoring script config file
+    ansible.builtin.copy:
+      src: ../linux_monitor_config.yml
+      dest: "/home/{{ svc_user }}/monitor"
+      owner: "{{ svc_user }}"
+      mode: '0644'
+    tags:
+      - script
+
+  - name: Schedule cron job
+    ansible.builtin.cron:
+      name: "Run linux_monitor.py"
+      minute: "*"
+      hour: "*"
+      day: "*"
+      user: "{{ svc_user }}"
+      job: "cd /home/{{ svc_user }}/monitor && python3 linux_monitor.py"
+    tags:
+      - cron
