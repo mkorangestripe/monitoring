@@ -115,8 +115,10 @@ class SystemMetrics:
             cpu_metrics["system.cpu.user"] = cpu_times_percent.user
             cpu_metrics["system.cpu.system"] = cpu_times_percent.system
             cpu_metrics["system.cpu.idle"] = cpu_times_percent.idle
-            # iowait not defined on macOS:
-            cpu_metrics["system.cpu.iowait"] = cpu_times_percent.iowait
+            try:
+                cpu_metrics["system.cpu.iowait"] = cpu_times_percent.iowait
+            except:
+                logging.error("Could not get cpu_times_percent.iowait")  # iowait not defined on macOS
             self.metrics["system_cpu"] = cpu_metrics
 
     def get_mem_metrics(self):
