@@ -213,8 +213,8 @@ class SystemMetrics:
         self.get_filesystem_ignore_patterns()
         self.compile_filesystem_ignore_regex()
         logging.info("Getting filesystems on machine")
-        ignore_fstype = ['autofs','binfmt_misc','cgroup','configfs','debugfs','devpts','efivarfs','fusectl',
-                         'hugetlbfs','mqueue','proc','pstore','securityfs','selinuxfs','sysfs']
+        ignore_fstype = ['autofs','binfmt_misc','bpf','cgroup','cgroup2','configfs','debugfs','devpts','efivarfs',
+                         'fusectl','hugetlbfs','mqueue','proc','pstore','securityfs','selinuxfs','squashfs','sysfs']
         try:
             filesystems = psutil.disk_partitions(True)
         except:
