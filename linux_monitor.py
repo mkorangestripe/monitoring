@@ -13,27 +13,8 @@ import yaml
 
 import psutil
 
-LOG_FILE = "/var/log/linux_monitor.log"  # Ansible creates this log file for the user
 CONFIG_FILE = "linux_monitor_config.yml"
-
-FORMAT = '%(asctime)-15s %(levelname)s %(message)s'
-logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format=FORMAT)
-
-try:
-    with open(CONFIG_FILE, "r", encoding="utf-8") as yaml_in_file:
-        metrics_config = yaml.safe_load(yaml_in_file)
-except:
-    logging.critical("Could not open %s, exiting", CONFIG_FILE)
-    sys.exit(1)
-
-locals().update(metrics_config['settings'])
-fs_config_file = config_dir + fs_config_file_name
-fs_config_file_max_age_hours = fs_config_file_max_age / 3600
-fs_config_url = fs_config_base_url + fs_config_file_name
-hostname = os.uname().nodename
-
-starttime = datetime.now().timestamp()
-logging.info("Starting metrics collection")
+LOG_FILE = "/var/log/linux_monitor.log"  # Ansible creates this log file for the user
 
 def get_json(json_url, json_file, json_required=True):
     '''Get the json config file, write to file, return content'''
@@ -74,6 +55,7 @@ class SystemMetrics:
     """Collect system metrics"""
 
     def __init__(self):
+        hostname = os.uname().nodename
         self.fs_config = ''
         self.mountpoint_ignore_regex = ''
         self.filesystem_ignore_regex = ''
@@ -231,21 +213,43 @@ class SystemMetrics:
             self.get_filesystem_metrics()
 
 
-system_metrics = SystemMetrics()
+if __name__ == '__main__':
 
-for method in metrics_config['metrics']:
-    if method in dir(system_metrics):
-        method = "system_metrics." + method
-        eval(method)()
+    FORMAT = '%(asctime)-15s %(levelname)s %(message)s'
+    logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format=FORMAT)
 
-timestamp = datetime.now().timestamp()
-metrics_json = {timestamp:system_metrics.metrics}
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as yaml_in_file:
+            metrics_config = yaml.safe_load(yaml_in_file)
+    except:
+        logging.critical("Could not open %s, exiting", CONFIG_FILE)
+        sys.exit(1)
 
-try:
-    with open(metrics_file, "a", encoding="utf-8") as metrics_out_file:
-        metrics_out_file.write(json.dumps(metrics_json))
-except:
-    logging.critical("Could not open %s, exiting", metrics_file)
-    sys.exit(1)
+    locals().update(metrics_config['settings'])
+    fs_config_file = config_dir + fs_config_file_name
+    fs_config_file_max_age_hours = fs_config_file_max_age / 3600
+    fs_config_url = fs_config_base_url + fs_config_file_name
 
-exit_gracefully()
+    starttime = datetime.now().timestamp()
+    logging.info("Starting metrics collection")
+
+    system_metrics = SystemMetrics()
+
+    for method in metrics_config['metrics']:
+        if method in dir(system_metrics):
+            method = "system_metrics." + method
+            eval(method)()
+        else:
+            logging.error("\"%s\" is not a valid method", method)
+
+    timestamp = datetime.now().timestamp()
+    metrics_json = {timestamp:system_metrics.metrics}
+
+    try:
+        with open(metrics_file, "a", encoding="utf-8") as metrics_out_file:
+            metrics_out_file.write(json.dumps(metrics_json))
+    except:
+        logging.critical("Could not open %s, exiting", metrics_file)
+        sys.exit(1)
+
+    exit_gracefully()
