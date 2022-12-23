@@ -9,9 +9,9 @@ import re
 import sys
 from datetime import datetime
 from urllib import request
-import yaml
 
 import psutil
+import yaml
 
 CONFIG_FILE = "linux_monitor_config.yml"
 LOG_FILE = "/var/log/linux_monitor.log"  # Ansible creates this log file for the user
