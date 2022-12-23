@@ -37,7 +37,7 @@ def test_get_cpu_metrics():
     assert system_metrics.metrics["system_cpu"]["system.cpu.idle"]
     assert system_metrics.metrics["system_cpu"]["system.cpu.iowait"]
 
-@pytest.mark.metrics
+@pytest.mark.mem_metrics
 def test_get_mem_metrics():
     """Test get_mem_metrics()"""
     system_metrics.get_mem_metrics()
