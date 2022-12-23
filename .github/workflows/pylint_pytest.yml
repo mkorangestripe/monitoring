@@ -26,4 +26,4 @@ jobs:
         pylint $(git ls-files '*.py')
     - name: Test with pytest
       run: |
-        pytest -v -m "not cpu_metrics and not mem_metrics"
+        pytest -v -m "not cpu_metrics and not swap_metrics"
