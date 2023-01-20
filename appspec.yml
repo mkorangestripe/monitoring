@@ -3,5 +3,5 @@ os: linux
 files:
   - source: linux_monitor.py
     destination: /home/ec2-user/monitor
-  - source: linux_monitor_config.py
+  - source: linux_monitor_config.yml
     destination: /home/ec2-user/monitor
