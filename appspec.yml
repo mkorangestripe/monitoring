@@ -1,0 +1,7 @@
+version: 0.0
+os: linux
+files:
+  - source: linux_monitor.py
+    destination: /home/ec2-user/monitor
+  - source: linux_monitor_config.py
+    destination: /home/ec2-user/monitor
