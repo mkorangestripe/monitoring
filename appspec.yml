@@ -1,7 +1,17 @@
 version: 0.0
 os: linux
 files:
+  - source: requirements.txt
+    destination: /home/ec2-user/monitor
   - source: linux_monitor.py
     destination: /home/ec2-user/monitor
   - source: linux_monitor_config.yml
-    destination: /home/ec2-user/monitor
+    destination: /usr/local/bin
+permissions:
+  - object: /home/ec2-user/monitor
+    pattern: "*.*"
+    owner: ec2-user
+    group: ec2-user
+    mode: 644
+    type:
+      - file
