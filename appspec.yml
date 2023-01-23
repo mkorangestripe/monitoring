@@ -6,7 +6,7 @@ files:
   - source: linux_monitor.py
     destination: /home/ec2-user/monitor
   - source: linux_monitor_config.yml
-    destination: /usr/local/bin
+    destination: /home/ec2-user/monitor
 permissions:
   - object: /home/ec2-user/monitor
     pattern: "*.*"
