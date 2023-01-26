@@ -20,7 +20,7 @@
 
   - name: Copy Pip requirements file
     ansible.builtin.copy:
-      src: ../requirements.txt
+      src: ../linux_monitor/requirements.txt
       dest: "/home/{{ svc_user }}/monitor/"
       owner: "{{ svc_user }}"
       mode: '0644'
@@ -88,7 +88,7 @@
 
   - name: Copy monitoring script
     ansible.builtin.copy:
-      src: ../linux_monitor.py
+      src: ../linux_monitor/linux_monitor.py
       dest: "/home/{{ svc_user }}/monitor"
       owner: "{{ svc_user }}"
       mode: '0644'
@@ -97,7 +97,7 @@
 
   - name: Copy monitoring script config file
     ansible.builtin.copy:
-      src: ../linux_monitor_config.yml
+      src: ../linux_monitor/linux_monitor_config.yml
       dest: "/home/{{ svc_user }}/monitor"
       owner: "{{ svc_user }}"
       mode: '0644'
