@@ -3,8 +3,8 @@
 import pytest
 import yaml
 
-from linux_monitor import CONFIG_FILE
-from linux_monitor import SystemMetrics
+CONFIG_FILE = "linux_monitor/linux_monitor_config.yml"
+from linux_monitor.linux_monitor import SystemMetrics
 
 system_metrics = SystemMetrics()
 
