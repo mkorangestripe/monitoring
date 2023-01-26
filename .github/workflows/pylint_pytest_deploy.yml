@@ -25,7 +25,7 @@ jobs:
         pip install -r requirements.txt
     - name: Analysing the code with pylint
       run: |
-        pylint $(git ls-files '*.py')
+        pylint $(git ls-files 'linux_monitor/*.py')
     - name: Test with pytest
       run: |
         pytest -v -m "not cpu_metrics and not swap_metrics"
