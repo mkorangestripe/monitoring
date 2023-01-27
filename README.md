@@ -1,8 +1,8 @@
 ## System monitoring
 
 * linux_monitor is a cron driven Python app that collects system usage data using the psutil module. It runs on Linux and other Unix-like machines.
-* As is [linux_monitor.py](linux_monitor/linux_monitor.py) writes to /var/log/linux_monitor.json but could be easily modified to send metrics to an api.
-* The [linux_monitor_config.yml](linux_monitor/linux_monitor_config.yml) file has the system metrics to be collected. Other metrics can be added as needed.
+* [linux_monitor.py](linux_monitor/linux_monitor.py) writes to /var/log/linux_monitor.json but could be easily modified to send metrics to an api.
+* [linux_monitor_config.yml](linux_monitor/linux_monitor_config.yml) lists the system metrics to be collected. Other metrics can be added as needed.
 
 * Deploy with Ansible
     * The Ansible playbook in this repo can be used to create everything needed for linux_monitor to run including the cron and logroate entries. The playbook will also install the required Python modules and deploy the linux_monitor app itself.
