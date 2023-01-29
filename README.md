@@ -16,5 +16,6 @@ ansible-playbook deploy_linux_monitor.yml --connection=local -i localhost, -e 's
 * The Ansible playbook mentioned above must be run initially on the EC2 instance. The playbook could be included in part of the pipeline if desired, but the GitHub workflow will always deploy the linux_monitor code.
 * See this [Integrating with GitHub Actions](https://aws.amazon.com/blogs/devops/integrating-with-github-actions-ci-cd-pipeline-to-deploy-a-web-app-to-amazon-ec2/) document for reference on setting up the link between GitHub Actions and AWS.
 
+### Sample output
 ![linux_monitor_output](readme_images/linux_monitor_output_800.png)
 ![tail_linux_monitor_log](readme_images/tail_linux_monitor_log_800.png)
