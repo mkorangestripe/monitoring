@@ -4,11 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-psutil = "*"
 PyYAML = "*"
+psutil = "*"
 
 [dev-packages]
 pylint = "*"
+pytest = "*"
 
 [requires]
 python_version = "3.9"
